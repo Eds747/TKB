@@ -16,10 +16,10 @@ app.add_middleware(
 )
 
 # Mount static files (for serving frontend)
-app.mount("/static", StaticFiles(directory="frontend"), name="static")
+app.mount("/static", StaticFiles(directory="../frontend"), name="static")
 
 # Data directory paths
-DATA_DIR = Path("backend/data")
+DATA_DIR = Path("data")
 ALIMENTACION_DIR = Path(r"C:\Users\chris\Downloads\alimentacion")
 
 def load_json_file(file_path: Path):
