@@ -32,26 +32,7 @@ jobs:
         # Remove README.md to prevent Azure from serving it
         rm -f README.md readme.md Readme.md
         
-        # Create a simple main.py that Azure can execute directly
-        cat > main.py << 'EOF'
-        import sys
-        import os
-        from pathlib import Path
-
-        # Add current directory to Python path
-        sys.path.insert(0, os.getcwd())
-
-        # Import and run the FastAPI app
-        from backend.app import app
-
-        if __name__ == "__main__":
-            import uvicorn
-            port = int(os.environ.get("PORT", 8000))
-            print(f"Starting YHWH Knowledge Base on port {port}")
-            uvicorn.run(app, host="0.0.0.0", port=port)
-        EOF
-
-        # Create web.config for Azure App Service with simpler configuration
+        # Create web.config for Azure App Service
         cat > web.config << 'EOF'
         <?xml version="1.0" encoding="utf-8"?>
         <configuration>
@@ -60,11 +41,14 @@ jobs:
               <add name="PythonHandler" path="*" verb="*" modules="httpPlatformHandler" resourceType="Unspecified"/>
             </handlers>
             <httpPlatform processPath="D:\home\python\python.exe" 
-                          arguments="main.py" 
+                          arguments="application.py" 
                           stdoutLogEnabled="true" 
-                          stdoutLogFile="D:\home\LogFiles\stdout.log">
+                          stdoutLogFile="D:\home\LogFiles\application.log" 
+                          startupTimeLimit="300"
+                          requestTimeout="00:04:00">
               <environmentVariables>
                 <environmentVariable name="PORT" value="%HTTP_PLATFORM_PORT%" />
+                <environmentVariable name="PYTHONPATH" value="D:\home\site\wwwroot" />
               </environmentVariables>
             </httpPlatform>
           </system.webServer>
@@ -73,7 +57,7 @@ jobs:
 
         # Verify deployment files
         echo "📁 Deployment files ready:"
-        ls -la backend/ frontend/ backend/data/ || echo "Directories checked"
+        ls -la backend/ frontend/ backend/data/ application.py || echo "Files checked"
 
     - name: 🚀 Deploy to Azure Web App
       uses: azure/webapps-deploy@v2
@@ -81,4 +65,4 @@ jobs:
         app-name: ${{ env.AZURE_WEBAPP_NAME }}
         publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
         package: .
-        startup-command: 'python main.py'
+        startup-command: 'python application.py'
