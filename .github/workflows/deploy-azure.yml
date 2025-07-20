@@ -29,6 +29,14 @@ jobs:
 
     - name: 🔧 Prepare deployment package
       run: |
+        # Create startup.sh for better Azure deployment
+        cat > startup.sh << 'EOF'
+        #!/bin/bash
+        cd /home/site/wwwroot
+        python -m uvicorn main:app --host 0.0.0.0 --port 8000
+        EOF
+        chmod +x startup.sh
+
         # Create main.py as the entry point for Azure App Service
         cat > main.py << 'EOF'
         from fastapi import FastAPI, HTTPException
@@ -53,15 +61,14 @@ jobs:
         # Mount static files (frontend)
         app.mount("/static", StaticFiles(directory="frontend"), name="static")
 
-        # Data directory paths
-        ALIMENTACION_DIR = Path(r"C:\Users\chris\Downloads\alimentacion")
-        # Fallback to local data if alimentacion folder not available
-        if not ALIMENTACION_DIR.exists():
-            ALIMENTACION_DIR = Path("backend/data")
+        # Data directory paths - Use only backend/data for Azure deployment
+        ALIMENTACION_DIR = Path("backend/data")
 
         def load_json_file(file_path: Path):
             """Load JSON file with error handling"""
             try:
+                if not file_path.exists():
+                    return {"error": f"File {file_path.name} not found"}
                 with open(file_path, "r", encoding="utf-8") as f:
                     return json.load(f)
             except Exception as e:
@@ -76,53 +83,40 @@ jobs:
         def get_all_data():
             """Get all knowledge base data"""
             data = {}
-            json_files = glob.glob(str(ALIMENTACION_DIR / "*.json"))
+            
+            # Load all JSON files from backend/data
+            json_files = list(ALIMENTACION_DIR.glob("*.json"))
             
             for file_path in json_files:
-                file_name = Path(file_path).stem
-                data[file_name] = load_json_file(Path(file_path))
+                file_name = file_path.stem
+                data[file_name] = load_json_file(file_path)
             
             return data
 
         @app.get("/api/appointments")
         def get_appointments():
             """Get appointment guide data"""
-            try:
-                return load_json_file(ALIMENTACION_DIR / "appointment_guide.json")
-            except:
-                return {"error": "Appointment data not available"}
+            return load_json_file(ALIMENTACION_DIR / "appointment_guide.json")
 
         @app.get("/api/information")
         def get_information():
             """Get general information including HIPAA, prescriptions, etc."""
-            try:
-                return load_json_file(ALIMENTACION_DIR / "information.json")
-            except:
-                return {"error": "Information data not available"}
+            return load_json_file(ALIMENTACION_DIR / "information.json")
 
         @app.get("/api/staff")
         def get_staff_extensions():
             """Get staff extensions"""
-            try:
-                return load_json_file(ALIMENTACION_DIR / "staff_extensions.json")
-            except:
-                return {"error": "Staff data not available"}
+            return load_json_file(ALIMENTACION_DIR / "staff_extensions.json")
 
         @app.get("/api/insurance")
         def get_insurance_portals():
             """Get insurance portals information"""
-            try:
-                return load_json_file(ALIMENTACION_DIR / "insurance_portals.json")
-            except:
-                return {"error": "Insurance data not available"}
+            return load_json_file(ALIMENTACION_DIR / "insurance_portals.json")
 
         @app.get("/api/callflow")
         def get_callflow():
             """Get callflow information"""
-            try:
-                return load_json_file(ALIMENTACION_DIR / "callflow_corrected.json")
-            except:
-                return {"error": "Callflow data not available"}
+            return load_json_file(ALIMENTACION_DIR / "callflow_corrected.json")
 
         @app.get("/api/categories")
         def get_categories():
@@ -173,17 +167,34 @@ jobs:
             <handlers>
               <add name="PythonHandler" path="*" verb="*" modules="httpPlatformHandler" resourceType="Unspecified"/>
             </handlers>
-            <httpPlatform processPath="D:\home\python364x64\python.exe" 
+            <httpPlatform processPath="D:\home\site\wwwroot\env\Scripts\python.exe" 
                           arguments="main.py" 
                           stdoutLogEnabled="true" 
                           stdoutLogFile="D:\home\LogFiles\python.log" 
-                          startupTimeLimit="60" 
+                          startupTimeLimit="180" 
                           requestTimeout="00:04:00">
               <environmentVariables>
                 <environmentVariable name="PORT" value="%HTTP_PLATFORM_PORT%" />
                 <environmentVariable name="PYTHONPATH" value="D:\home\site\wwwroot" />
+                <environmentVariable name="PYTHONUNBUFFERED" value="1" />
               </environmentVariables>
             </httpPlatform>
+            <rewrite>
+              <rules>
+                <rule name="Static Files" stopProcessing="true">
+                  <match url="^(frontend/.*|.*\.(css|js|png|jpg|jpeg|gif|ico|svg))$" />
+                  <action type="Rewrite" url="{R:1}" />
+                </rule>
+                <rule name="API Routes" stopProcessing="true">
+                  <match url="^api/.*" />
+                  <action type="Rewrite" url="main.py/{R:0}" />
+                </rule>
+                <rule name="Frontend" stopProcessing="true">
+                  <match url=".*" />
+                  <action type="Rewrite" url="main.py/{R:0}" />
+                </rule>
+              </rules>
+            </rewrite>
             <staticContent>
               <mimeMap fileExtension=".json" mimeType="application/json" />
               <mimeMap fileExtension=".js" mimeType="application/javascript" />

@@ -14,7 +14,11 @@ class KnowledgeBase {
     async init() {
         this.bindEvents();
         await this.loadInitialData();
-        this.setupSearch();
+    }
+
+    setupSearch() {
+        // Search functionality is already set up in bindEvents
+        // This method exists to prevent the error
     }
 
     bindEvents() {
@@ -47,30 +51,65 @@ class KnowledgeBase {
     async loadCategories() {
         try {
             const response = await fetch(`${this.baseURL}/api/categories`);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
             const data = await response.json();
-            this.renderCategories(data.categories);
+            this.renderCategories(data.categories || []);
         } catch (error) {
             console.error('Error loading categories:', error);
+            // Fallback categories for when server is unavailable
+            const fallbackCategories = [
+                {"id": "appointments", "name": "Appointment Guide", "icon": "📅"},
+                {"id": "information", "name": "General Information", "icon": "ℹ️"},
+                {"id": "staff", "name": "Staff Extensions", "icon": "👥"},
+                {"id": "insurance", "name": "Insurance Portals", "icon": "🏥"},
+                {"id": "callflow", "name": "Call Flow", "icon": "📞"}
+            ];
+            this.renderCategories(fallbackCategories);
         }
     }
 
     async loadUpdates() {
         try {
             const response = await fetch(`${this.baseURL}/api/updates`);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
             const data = await response.json();
-            this.renderUpdates(data.updates);
+            this.renderUpdates(data.updates || []);
         } catch (error) {
             console.error('Error loading updates:', error);
+            // Fallback updates
+            const fallbackUpdates = [
+                {
+                    "title": "System Loading",
+                    "description": "YHWH Knowledge Base is initializing...",
+                    "date": "2025-01-20",
+                    "priority": "medium",
+                    "category": "system"
+                }
+            ];
+            this.renderUpdates(fallbackUpdates);
         }
     }
 
     async loadAllData() {
         try {
             const response = await fetch(`${this.baseURL}/api/data`);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
             this.data = await response.json();
             this.buildSearchIndex();
         } catch (error) {
             console.error('Error loading data:', error);
+            this.data = {
+                "information": {
+                    "error": "Unable to load data. Please check your connection."
+                }
+            };
+            this.buildSearchIndex();
         }
     }
 
