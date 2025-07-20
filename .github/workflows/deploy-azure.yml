@@ -1,0 +1,49 @@
+name: Deploy YHWH Knowledge Base to Azure
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+env:
+  AZURE_WEBAPP_NAME: yhwh-knowledge-base
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 🔥 Checkout repository
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: 📦 Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: 🔧 Prepare deployment package
+      run: |
+        # Create web.config for Azure
+        cat > web.config << 'EOF'
+        <?xml version="1.0" encoding="utf-8"?>
+        <configuration>
+          <system.webServer>
+            <handlers>
+              <add name="PythonHandler" path="*" verb="*" modules="FastCgiModule" scriptProcessor="D:\Python\python.exe" resourceType="Unspecified" requireAccess="Script"/>
+            </handlers>
+          </system.webServer>
+        </configuration>
+        EOF
+
+    - name: 🚀 Deploy to Azure Web App
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: ${{ env.AZURE_WEBAPP_NAME }}
+        publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
+        package: .
