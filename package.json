@@ -1,0 +1,36 @@
+{
+  "name": "yhwh-knowledge-base",
+  "version": "1.0.0",
+  "description": "YHWH Healthcare Knowledge Base - A comprehensive white, iconic, liquid white knowledge management system with Tailwind CSS",
+  "main": "index.html",
+  "scripts": {
+    "dev": "python -m http.server 3000 --directory frontend",
+    "backend": "cd backend && uvicorn app:app --reload --host 0.0.0.0 --port 8000",
+    "start": "concurrently \"npm run backend\" \"npm run dev\"",
+    "install-deps": "pip install fastapi uvicorn pydantic python-multipart",
+    "build": "echo 'Build process - copy files to dist'",
+    "deploy": "echo 'Deploy to production'"
+  },
+  "keywords": [
+    "knowledge-base",
+    "healthcare",
+    "fastapi", 
+    "tailwind",
+    "white-design",
+    "liquid-ui"
+  ],
+  "author": "YHWH Development Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Eds747/TKB.git"
+  },
+  "devDependencies": {
+    "concurrently": "^7.6.0"
+  },
+  "dependencies": {},
+  "engines": {
+    "node": ">=14.0.0",
+    "python": ">=3.10.0"
+  }
+}
