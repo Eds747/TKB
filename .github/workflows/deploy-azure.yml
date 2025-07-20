@@ -29,6 +29,11 @@ jobs:
 
     - name: 🔧 Prepare deployment package
       run: |
+        # Remove README.md to prevent Azure from serving it
+        rm -f README.md
+        rm -f readme.md
+        rm -f Readme.md
+        
         # Create web.config for Azure App Service
         cat > web.config << 'EOF'
         <?xml version="1.0" encoding="utf-8"?>
@@ -48,6 +53,7 @@ jobs:
                 <environmentVariable name="PORT" value="%HTTP_PLATFORM_PORT%" />
                 <environmentVariable name="PYTHONPATH" value="D:\home\site\wwwroot" />
                 <environmentVariable name="PYTHONUNBUFFERED" value="1" />
+                <environmentVariable name="SCM_DO_BUILD_DURING_DEPLOYMENT" value="true" />
               </environmentVariables>
             </httpPlatform>
             <defaultDocument>
@@ -55,8 +61,28 @@ jobs:
                 <clear />
               </files>
             </defaultDocument>
+            <staticContent>
+              <remove fileExtension=".md" />
+            </staticContent>
           </system.webServer>
         </configuration>
+        EOF
+        
+        # Create startup script that forces the app to run
+        cat > startup.py << 'EOF'
+        import os
+        import sys
+        import subprocess
+        
+        print("=== YHWH Knowledge Base Startup ===")
+        print(f"Python version: {sys.version}")
+        print(f"Working directory: {os.getcwd()}")
+        print(f"Files in directory: {os.listdir('.')}")
+        
+        # Force start the server
+        port = os.environ.get("PORT", "8000")
+        cmd = [sys.executable, "server.py"]
+        subprocess.run(cmd)
         EOF
 
         # Verify all required files exist
@@ -72,4 +98,4 @@ jobs:
         app-name: ${{ env.AZURE_WEBAPP_NAME }}
         publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
         package: .
-        startup-command: 'python server.py'
+        startup-command: 'bash startup.sh'

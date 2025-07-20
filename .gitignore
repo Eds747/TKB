@@ -108,3 +108,9 @@ backend/data/*.json
 # Backup files
 *.bak
 *.backup
+
+# Documentation (don't deploy to production)
+README.md
+readme.md
+Readme.md
+docs/
