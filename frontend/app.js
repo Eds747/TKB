@@ -1,7 +1,9 @@
 // YHWH Knowledge Base JavaScript
 class KnowledgeBase {
     constructor() {
-        this.baseURL = 'http://localhost:8000';
+        // Check if we're running locally or on Azure
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        this.baseURL = isLocal ? 'http://localhost:8000' : window.location.origin;
         this.currentCategory = null;
         this.data = {};
         this.searchIndex = [];

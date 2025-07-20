@@ -29,14 +29,166 @@ jobs:
 
     - name: 🔧 Prepare deployment package
       run: |
-        # Create web.config for Azure
+        # Create main.py as the entry point for Azure App Service
+        cat > main.py << 'EOF'
+        from fastapi import FastAPI, HTTPException
+        from fastapi.middleware.cors import CORSMiddleware
+        from fastapi.staticfiles import StaticFiles
+        from fastapi.responses import FileResponse
+        import json
+        from pathlib import Path
+        import glob
+        import os
+
+        app = FastAPI(title="YHWH Knowledge Base API", version="1.0.0")
+
+        # CORS configuration
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+
+        # Mount static files (frontend)
+        app.mount("/static", StaticFiles(directory="frontend"), name="static")
+
+        # Data directory paths
+        ALIMENTACION_DIR = Path(r"C:\Users\chris\Downloads\alimentacion")
+        # Fallback to local data if alimentacion folder not available
+        if not ALIMENTACION_DIR.exists():
+            ALIMENTACION_DIR = Path("backend/data")
+
+        def load_json_file(file_path: Path):
+            """Load JSON file with error handling"""
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception as e:
+                return {"error": f"Error loading {file_path.name}: {str(e)}"}
+
+        @app.get("/")
+        def serve_frontend():
+            """Serve the main HTML page"""
+            return FileResponse("frontend/index.html")
+
+        @app.get("/api/data")
+        def get_all_data():
+            """Get all knowledge base data"""
+            data = {}
+            json_files = glob.glob(str(ALIMENTACION_DIR / "*.json"))
+            
+            for file_path in json_files:
+                file_name = Path(file_path).stem
+                data[file_name] = load_json_file(Path(file_path))
+            
+            return data
+
+        @app.get("/api/appointments")
+        def get_appointments():
+            """Get appointment guide data"""
+            try:
+                return load_json_file(ALIMENTACION_DIR / "appointment_guide.json")
+            except:
+                return {"error": "Appointment data not available"}
+
+        @app.get("/api/information")
+        def get_information():
+            """Get general information including HIPAA, prescriptions, etc."""
+            try:
+                return load_json_file(ALIMENTACION_DIR / "information.json")
+            except:
+                return {"error": "Information data not available"}
+
+        @app.get("/api/staff")
+        def get_staff_extensions():
+            """Get staff extensions"""
+            try:
+                return load_json_file(ALIMENTACION_DIR / "staff_extensions.json")
+            except:
+                return {"error": "Staff data not available"}
+
+        @app.get("/api/insurance")
+        def get_insurance_portals():
+            """Get insurance portals information"""
+            try:
+                return load_json_file(ALIMENTACION_DIR / "insurance_portals.json")
+            except:
+                return {"error": "Insurance data not available"}
+
+        @app.get("/api/callflow")
+        def get_callflow():
+            """Get callflow information"""
+            try:
+                return load_json_file(ALIMENTACION_DIR / "callflow_corrected.json")
+            except:
+                return {"error": "Callflow data not available"}
+
+        @app.get("/api/categories")
+        def get_categories():
+            """Get available categories"""
+            return {
+                "categories": [
+                    {"id": "appointments", "name": "Appointment Guide", "icon": "📅"},
+                    {"id": "information", "name": "General Information", "icon": "ℹ️"},
+                    {"id": "staff", "name": "Staff Extensions", "icon": "👥"},
+                    {"id": "insurance", "name": "Insurance Portals", "icon": "🏥"},
+                    {"id": "callflow", "name": "Call Flow", "icon": "📞"}
+                ]
+            }
+
+        @app.get("/api/updates")
+        def get_updates():
+            """Get recent updates"""
+            return {
+                "updates": [
+                    {
+                        "title": "Azure Deployment Active",
+                        "description": "YHWH Knowledge Base is now deployed on Azure",
+                        "date": "2025-01-20",
+                        "priority": "high",
+                        "category": "system"
+                    },
+                    {
+                        "title": "New HIPAA Guidelines",
+                        "description": "Updated privacy and security policies",
+                        "date": "2025-01-18",
+                        "priority": "medium",
+                        "category": "compliance"
+                    }
+                ]
+            }
+
+        if __name__ == "__main__":
+            import uvicorn
+            port = int(os.environ.get("PORT", 8000))
+            uvicorn.run(app, host="0.0.0.0", port=port)
+        EOF
+
+        # Create web.config for Azure App Service
         cat > web.config << 'EOF'
         <?xml version="1.0" encoding="utf-8"?>
         <configuration>
           <system.webServer>
             <handlers>
-              <add name="PythonHandler" path="*" verb="*" modules="FastCgiModule" scriptProcessor="D:\Python\python.exe" resourceType="Unspecified" requireAccess="Script"/>
+              <add name="PythonHandler" path="*" verb="*" modules="httpPlatformHandler" resourceType="Unspecified"/>
             </handlers>
+            <httpPlatform processPath="D:\home\python364x64\python.exe" 
+                          arguments="main.py" 
+                          stdoutLogEnabled="true" 
+                          stdoutLogFile="D:\home\LogFiles\python.log" 
+                          startupTimeLimit="60" 
+                          requestTimeout="00:04:00">
+              <environmentVariables>
+                <environmentVariable name="PORT" value="%HTTP_PLATFORM_PORT%" />
+                <environmentVariable name="PYTHONPATH" value="D:\home\site\wwwroot" />
+              </environmentVariables>
+            </httpPlatform>
+            <staticContent>
+              <mimeMap fileExtension=".json" mimeType="application/json" />
+              <mimeMap fileExtension=".js" mimeType="application/javascript" />
+              <mimeMap fileExtension=".css" mimeType="text/css" />
+            </staticContent>
           </system.webServer>
         </configuration>
         EOF
@@ -47,3 +199,4 @@ jobs:
         app-name: ${{ env.AZURE_WEBAPP_NAME }}
         publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
         package: .
+        startup-command: 'python main.py'

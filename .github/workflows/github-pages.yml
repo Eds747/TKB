@@ -34,32 +34,35 @@ jobs:
         mkdir -p build
         cp -r frontend/* build/
         
-        # Create a simple index.html redirect
-        cat > build/index.html << 'EOF'
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>YHWH Knowledge Base</title>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <script src="https://cdn.tailwindcss.com"></script>
-        </head>
-        <body class="bg-gray-100 flex items-center justify-center min-h-screen">
-            <div class="max-w-md mx-auto bg-white rounded-xl shadow-md p-6">
-                <h1 class="text-2xl font-bold mb-4">🏥 YHWH Knowledge Base</h1>
-                <p class="text-gray-600 mb-4">Healthcare Information System</p>
-                <div class="space-y-2">
-                    <p class="text-sm">📍 <strong>Status:</strong> Deployed on GitHub Pages</p>
-                    <p class="text-sm">🚀 <strong>Full Version:</strong> Requires backend server</p>
-                </div>
-                <div class="mt-6">
-                    <a href="https://github.com/Eds747/TKB" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-                        View Repository
-                    </a>
-                </div>
-            </div>
-        </body>
-        </html>
+        # Update the JavaScript to work without backend for demo
+        sed -i 's/http:\/\/localhost:8000//g' build/app.js
+        
+        # Create sample data for demo
+        mkdir -p build/api
+        cat > build/api/categories.json << 'EOF'
+        {
+          "categories": [
+            {"id": "appointments", "name": "Appointment Guide", "icon": "📅"},
+            {"id": "information", "name": "General Information", "icon": "ℹ️"},
+            {"id": "staff", "name": "Staff Extensions", "icon": "👥"},
+            {"id": "insurance", "name": "Insurance Portals", "icon": "🏥"},
+            {"id": "callflow", "name": "Call Flow", "icon": "📞"}
+          ]
+        }
+        EOF
+        
+        cat > build/api/updates.json << 'EOF'
+        {
+          "updates": [
+            {
+              "title": "YHWH Knowledge Base Deployed",
+              "description": "Successfully deployed to GitHub Pages with white liquid design",
+              "date": "2025-01-20",
+              "priority": "high",
+              "category": "system"
+            }
+          ]
+        }
         EOF
 
     - name: 📤 Upload artifact
