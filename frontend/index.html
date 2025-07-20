@@ -5,28 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YHWH Knowledge Base</title>
     
-    <!-- Tailwind CSS - Load first -->
-    <script>
-        // Only load Tailwind CDN in development
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            document.write('<script src="https://cdn.tailwindcss.com"><\/script>');
-        } else {
-            // Production: Load built CSS
-            document.write('<link rel="stylesheet" href="https://unpkg.com/tailwindcss@3.3.0/dist/tailwind.min.css">');
-        }
-    </script>
+    <!-- Tailwind CSS CDN - Always load -->
+    <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Tailwind Configuration - After Tailwind loads -->
+    <!-- Tailwind Configuration -->
     <script>
-        // Configure Tailwind after it loads
-        window.addEventListener('DOMContentLoaded', function() {
-            if (typeof tailwind !== 'undefined') {
-                tailwind.config = {
-                    theme: {
-                        extend: {
-                            colors: {
-                                liquid: {
-                                    50: '#fefefe',
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        liquid: {
+                            50: '#fefefe',
                                     100: '#fdfdfd', 
                                     200: '#fbfbfb',
                                     300: '#f8f8f8',
@@ -70,12 +59,8 @@
                             }
                         }
                     }
-                };
-            }
-        });
-    </script>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
+                }
+    </script>    <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>

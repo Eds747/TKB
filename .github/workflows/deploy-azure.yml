@@ -30,67 +30,50 @@ jobs:
     - name: 🔧 Prepare deployment package
       run: |
         # Remove README.md to prevent Azure from serving it
-        rm -f README.md
-        rm -f readme.md
-        rm -f Readme.md
+        rm -f README.md readme.md Readme.md
         
-        # Create web.config for Azure App Service
+        # Create a simple main.py that Azure can execute directly
+        cat > main.py << 'EOF'
+        import sys
+        import os
+        from pathlib import Path
+
+        # Add current directory to Python path
+        sys.path.insert(0, os.getcwd())
+
+        # Import and run the FastAPI app
+        from backend.app import app
+
+        if __name__ == "__main__":
+            import uvicorn
+            port = int(os.environ.get("PORT", 8000))
+            print(f"Starting YHWH Knowledge Base on port {port}")
+            uvicorn.run(app, host="0.0.0.0", port=port)
+        EOF
+
+        # Create web.config for Azure App Service with simpler configuration
         cat > web.config << 'EOF'
         <?xml version="1.0" encoding="utf-8"?>
         <configuration>
           <system.webServer>
             <handlers>
-              <remove name="StaticFile" />
               <add name="PythonHandler" path="*" verb="*" modules="httpPlatformHandler" resourceType="Unspecified"/>
             </handlers>
             <httpPlatform processPath="D:\home\python\python.exe" 
-                          arguments="server.py" 
+                          arguments="main.py" 
                           stdoutLogEnabled="true" 
-                          stdoutLogFile="D:\home\LogFiles\stdout.log" 
-                          startupTimeLimit="240" 
-                          requestTimeout="00:04:00">
+                          stdoutLogFile="D:\home\LogFiles\stdout.log">
               <environmentVariables>
                 <environmentVariable name="PORT" value="%HTTP_PLATFORM_PORT%" />
-                <environmentVariable name="PYTHONPATH" value="D:\home\site\wwwroot" />
-                <environmentVariable name="PYTHONUNBUFFERED" value="1" />
-                <environmentVariable name="SCM_DO_BUILD_DURING_DEPLOYMENT" value="true" />
               </environmentVariables>
             </httpPlatform>
-            <defaultDocument>
-              <files>
-                <clear />
-              </files>
-            </defaultDocument>
-            <staticContent>
-              <remove fileExtension=".md" />
-            </staticContent>
           </system.webServer>
         </configuration>
         EOF
-        
-        # Create startup script that forces the app to run
-        cat > startup.py << 'EOF'
-        import os
-        import sys
-        import subprocess
-        
-        print("=== YHWH Knowledge Base Startup ===")
-        print(f"Python version: {sys.version}")
-        print(f"Working directory: {os.getcwd()}")
-        print(f"Files in directory: {os.listdir('.')}")
-        
-        # Force start the server
-        port = os.environ.get("PORT", "8000")
-        cmd = [sys.executable, "server.py"]
-        subprocess.run(cmd)
-        EOF
 
-        # Verify all required files exist
-        echo "✅ Checking deployment files:"
-        ls -la backend/
-        ls -la frontend/
-        ls -la backend/data/
-        echo "📁 Files ready for deployment"
+        # Verify deployment files
+        echo "📁 Deployment files ready:"
+        ls -la backend/ frontend/ backend/data/ || echo "Directories checked"
 
     - name: 🚀 Deploy to Azure Web App
       uses: azure/webapps-deploy@v2
@@ -98,4 +81,4 @@ jobs:
         app-name: ${{ env.AZURE_WEBAPP_NAME }}
         publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
         package: .
-        startup-command: 'bash startup.sh'
+        startup-command: 'python main.py'
